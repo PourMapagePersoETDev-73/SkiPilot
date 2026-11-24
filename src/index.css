@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Default: Dark Blue theme (matching SKI PILOT Dark Blue palette) */
+  --bg-page: #0F1926;
+  --bg-panel: #172538;
+  --bg-elevated: #1D2E44;
+  --bg-subtle: #132031;
+  --border-hairline: #2B3E57;
+  --text-primary: #F3F7FB;
+  --text-secondary: #B9C8D9;
+  --text-muted: #8FA3BA;
+  --accent: #35C6D0;
+  --accent-contrast: #07191C;
+  --accent-soft: rgba(53, 198, 208, 0.14);
+}
+
+[data-theme="Light"] {
+  --bg-page: #F2F5F8;
+  --bg-panel: #FFFFFF;
+  --bg-elevated: #F8FAFC;
+  --bg-subtle: #E9EFF5;
+  --border-hairline: #CBD5E1;
+  --text-primary: #172536;
+  --text-secondary: #334155;
+  --text-muted: #536477;
+  --accent: #1D64B0;
+  --accent-contrast: #FFFFFF;
+  --accent-soft: rgba(29, 100, 176, 0.10);
+}
+
+[data-theme="Alpine Green"] {
+  --bg-page: #0E1F1A;
+  --bg-panel: #173028;
+  --bg-elevated: #1D3A31;
+  --bg-subtle: #122620;
+  --border-hairline: #2F5246;
+  --text-primary: #F1F8F4;
+  --text-secondary: #C5DED2;
+  --text-muted: #8EB2A2;
+  --accent: #64C99A;
+  --accent-contrast: #082017;
+  --accent-soft: rgba(100, 201, 154, 0.14);
+}
+
+[data-theme="Midnight Purple"] {
+  --bg-page: #151326;
+  --bg-panel: #211D38;
+  --bg-elevated: #2A2546;
+  --bg-subtle: #1A172F;
+  --border-hairline: #3C3561;
+  --text-primary: #F7F4FF;
+  --text-secondary: #D4CEEB;
+  --text-muted: #A39BC4;
+  --accent: #A78BFA;
+  --accent-contrast: #120B29;
+  --accent-soft: rgba(167, 139, 250, 0.15);
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

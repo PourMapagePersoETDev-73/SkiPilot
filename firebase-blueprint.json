@@ -1,0 +1,249 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Verified administrator identity record mapped to Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified administrator email address.",
+          "maxLength": 254
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin record was provisioned."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "AllowedUser": {
+      "title": "AllowedUser",
+      "description": "Authorized friend or collaborator granted access to SKI PILOT.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Normalized lowercase Google account email of the invited user.",
+          "maxLength": 254
+        },
+        "label": {
+          "type": "string",
+          "description": "Short display label for the invited friend.",
+          "maxLength": 80
+        },
+        "role": {
+          "type": "string",
+          "enum": ["friend", "admin"],
+          "description": "Access tier assigned to the user."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether access is currently active."
+        },
+        "addedByUid": {
+          "type": "string",
+          "description": "UID of the administrator who created this invitation.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": ["email", "label", "role", "active", "addedByUid", "createdAt", "updatedAt"]
+    },
+    "UserPrefs": {
+      "title": "UserPrefs",
+      "description": "Per-user private preferences including configurable departure label.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "departureLabel": {
+          "type": "string",
+          "description": "Custom departure city or region label shown only after login.",
+          "maxLength": 80
+        },
+        "showDepartureInSidebar": {
+          "type": "boolean",
+          "description": "Whether to display the departure label in the sidebar."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last preference update."
+        }
+      },
+      "required": ["uid", "departureLabel", "showDepartureInSidebar", "updatedAt"]
+    },
+    "SharedDatasetMeta": {
+      "title": "SharedDatasetMeta",
+      "description": "Singleton metadata coordinating cloud-synced ski stations and snow history across devices.",
+      "type": "object",
+      "properties": {
+        "docId": {
+          "type": "string",
+          "description": "Fixed singleton identifier ('current').",
+          "maxLength": 16,
+          "pattern": "^current$"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["sample", "excel", "skiradar"],
+          "description": "Origin of the active shared dataset."
+        },
+        "stationsFileName": {
+          "type": "string",
+          "description": "Optional source filename for stations.",
+          "maxLength": 160
+        },
+        "snowFileName": {
+          "type": "string",
+          "description": "Optional source filename for snow records.",
+          "maxLength": 160
+        },
+        "importedAt": {
+          "type": "string",
+          "description": "Human-readable timestamp of the last dataset update.",
+          "maxLength": 64
+        },
+        "stationCount": {
+          "type": "integer",
+          "description": "Total number of stations stored in cloud chunks."
+        },
+        "snowCount": {
+          "type": "integer",
+          "description": "Total number of daily snow records stored in cloud chunks."
+        },
+        "stationChunkCount": {
+          "type": "integer",
+          "description": "Number of stations_* documents in shared_chunks."
+        },
+        "snowChunkCount": {
+          "type": "integer",
+          "description": "Number of snow_* documents in shared_chunks."
+        },
+        "lastSnowDay": {
+          "type": "string",
+          "description": "Latest YYYY-MM-DD snow observation date across the dataset.",
+          "maxLength": 10
+        },
+        "lastArchiveCatchupAt": {
+          "type": "string",
+          "description": "ISO timestamp of the latest Open-Meteo Archive backfill.",
+          "maxLength": 40
+        },
+        "revision": {
+          "type": "integer",
+          "description": "Monotonically increasing cloud dataset revision."
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "Auth UID of the administrator who last updated the dataset.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest cloud sync."
+        }
+      },
+      "required": [
+        "docId",
+        "source",
+        "stationsFileName",
+        "snowFileName",
+        "importedAt",
+        "stationCount",
+        "snowCount",
+        "stationChunkCount",
+        "snowChunkCount",
+        "lastSnowDay",
+        "lastArchiveCatchupAt",
+        "revision",
+        "updatedByUid",
+        "updatedAt"
+      ]
+    },
+    "SharedDatasetChunk": {
+      "title": "SharedDatasetChunk",
+      "description": "Bounded chunk of station records or daily snow records for multi-device synchronization.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["stations", "snow"],
+          "description": "Type of records stored in this chunk."
+        },
+        "chunkIndex": {
+          "type": "integer",
+          "description": "Zero-based index of the chunk."
+        },
+        "revision": {
+          "type": "integer",
+          "description": "Cloud dataset revision matching SharedDatasetMeta."
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded array of station or snow record objects."
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "Auth UID of the administrator who wrote this chunk.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of chunk write."
+        }
+      },
+      "required": ["kind", "chunkIndex", "revision", "items", "updatedByUid", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Administrator registry keyed by Firebase Auth UID."
+    },
+    "/allowed_users/{inviteId}": {
+      "schema": { "$ref": "#/entities/AllowedUser" },
+      "description": "Allowlist of authorized Google accounts keyed by sanitized email ID."
+    },
+    "/user_prefs/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrefs" },
+      "description": "Private user profile and departure privacy settings keyed by Auth UID."
+    },
+    "/shared_meta/{docId}": {
+      "schema": { "$ref": "#/entities/SharedDatasetMeta" },
+      "description": "Singleton metadata coordinating multi-device sync of stations and snow history."
+    },
+    "/shared_chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/SharedDatasetChunk" },
+      "description": "Chunked station and snow records readable by authorized users and writable only by admins."
+    }
+  }
+}

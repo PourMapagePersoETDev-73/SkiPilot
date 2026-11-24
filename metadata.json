@@ -1,0 +1,6 @@
+{
+  "name": "SKI PILOT",
+  "description": "Tableau de bord analytique de stations de ski et historique d'enneigement basé sur vos fichiers Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

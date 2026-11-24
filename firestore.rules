@@ -1,0 +1,264 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedInVerified() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrapAdmin() {
+      return isSignedInVerified()
+        && request.auth.token.email.lower() == 'amottaviani@hotmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrapAdmin()
+        || (isSignedInVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function normalizedAuthEmail() {
+      return request.auth.token.email.lower().replace('[^a-z0-9_\\-]', '_');
+    }
+
+    function isAuthorizedUser() {
+      return isAdmin() || (
+        isSignedInVerified()
+        && exists(/databases/$(database)/documents/allowed_users/$(normalizedAuthEmail()))
+        && get(/databases/$(database)/documents/allowed_users/$(normalizedAuthEmail())).data.active == true
+      );
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'createdAt'])
+        && data.uid is string && isValidId(data.uid) && data.uid == request.auth.uid
+        && data.email is string && data.email.size() > 3 && data.email.size() <= 254
+        && data.email.lower() == request.auth.token.email.lower()
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAllowedUser(data, inviteId) {
+      return data.keys().hasAll(['email', 'label', 'role', 'active', 'addedByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['email', 'label', 'role', 'active', 'addedByUid', 'createdAt', 'updatedAt'])
+        && data.email is string && data.email.size() > 3 && data.email.size() <= 254
+        && data.email.lower().replace('[^a-z0-9_\\-]', '_') == inviteId
+        && data.label is string && data.label.size() > 0 && data.label.size() <= 80
+        && data.role in ['friend', 'admin']
+        && data.active is bool
+        && data.addedByUid is string && isValidId(data.addedByUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrefs(data, userId) {
+      return data.keys().hasAll(['uid', 'departureLabel', 'showDepartureInSidebar', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'departureLabel', 'showDepartureInSidebar', 'updatedAt'])
+        && data.uid is string && isValidId(data.uid) && data.uid == userId
+        && data.departureLabel is string && data.departureLabel.size() <= 80
+        && data.showDepartureInSidebar is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSharedMeta(data, docId) {
+      return docId == 'current'
+        && data.keys().hasAll([
+          'docId',
+          'source',
+          'stationsFileName',
+          'snowFileName',
+          'importedAt',
+          'stationCount',
+          'snowCount',
+          'stationChunkCount',
+          'snowChunkCount',
+          'lastSnowDay',
+          'lastArchiveCatchupAt',
+          'revision',
+          'updatedByUid',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'docId',
+          'source',
+          'stationsFileName',
+          'snowFileName',
+          'importedAt',
+          'stationCount',
+          'snowCount',
+          'stationChunkCount',
+          'snowChunkCount',
+          'lastSnowDay',
+          'lastArchiveCatchupAt',
+          'revision',
+          'updatedByUid',
+          'updatedAt'
+        ])
+        && data.docId is string && data.docId == 'current' && data.docId.size() <= 16
+        && data.source is string && data.source in ['sample', 'excel', 'skiradar']
+        && data.stationsFileName is string && data.stationsFileName.size() <= 160
+        && data.snowFileName is string && data.snowFileName.size() <= 160
+        && data.importedAt is string && data.importedAt.size() <= 64
+        && data.stationCount is int && data.stationCount >= 0 && data.stationCount <= 5000
+        && data.snowCount is int && data.snowCount >= 0 && data.snowCount <= 100000
+        && data.stationChunkCount is int && data.stationChunkCount >= 0 && data.stationChunkCount <= 30
+        && data.snowChunkCount is int && data.snowChunkCount >= 0 && data.snowChunkCount <= 100
+        && data.lastSnowDay is string && data.lastSnowDay.size() <= 10
+        && data.lastArchiveCatchupAt is string && data.lastArchiveCatchupAt.size() <= 40
+        && data.revision is int && data.revision >= 1 && data.revision <= 10000000
+        && data.updatedByUid is string && isValidId(data.updatedByUid) && data.updatedByUid == request.auth.uid
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSharedChunk(data, chunkId) {
+      return chunkId.matches('^(stations|snow)_[0-9]{1,3}$')
+        && data.keys().hasAll(['kind', 'chunkIndex', 'revision', 'items', 'updatedByUid', 'updatedAt'])
+        && data.keys().hasOnly(['kind', 'chunkIndex', 'revision', 'items', 'updatedByUid', 'updatedAt'])
+        && data.kind is string && data.kind in ['stations', 'snow']
+        && ((data.kind == 'stations' && chunkId.matches('^stations_[0-9]{1,3}$'))
+          || (data.kind == 'snow' && chunkId.matches('^snow_[0-9]{1,3}$')))
+        && data.chunkIndex is int && data.chunkIndex >= 0 && data.chunkIndex <= 100
+        && data.revision is int && data.revision >= 1 && data.revision <= 10000000
+        && data.items is list && data.items.size() <= 1500
+        && (data.items.size() == 0 || data.items[0] is map)
+        && data.updatedByUid is string && isValidId(data.updatedByUid) && data.updatedByUid == request.auth.uid
+        && data.updatedAt is timestamp;
+    }
+
+    match /test/{docId} {
+      allow get: if isSignedInVerified() && docId == 'connection';
+    }
+
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && isSignedInVerified() && (request.auth.uid == userId || isAdmin());
+      allow create: if isValidId(userId)
+        && isBootstrapAdmin()
+        && userId == request.auth.uid
+        && isValidAdminUser(incoming())
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /allowed_users/{inviteId} {
+      allow get: if isValidId(inviteId) && isSignedInVerified() && (
+        inviteId == normalizedAuthEmail() || isAdmin()
+      );
+      allow list: if isAdmin();
+      allow create: if isValidId(inviteId)
+        && isSignedInVerified()
+        && isValidAllowedUser(incoming(), inviteId)
+        && incoming().addedByUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isValidId(inviteId)
+        && isSignedInVerified()
+        && isValidAllowedUser(incoming(), inviteId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['label', 'role', 'active', 'updatedAt'])
+        && incoming().email == existing().email
+        && incoming().addedByUid == existing().addedByUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow delete: if isValidId(inviteId) && isAdmin();
+    }
+
+    match /user_prefs/{userId} {
+      allow get: if isValidId(userId) && isSignedInVerified() && (request.auth.uid == userId || isAdmin());
+      allow create: if isValidId(userId)
+        && isSignedInVerified()
+        && request.auth.uid == userId
+        && isValidUserPrefs(incoming(), userId)
+        && incoming().updatedAt == request.time
+        && isAuthorizedUser();
+      allow update: if isValidId(userId)
+        && isSignedInVerified()
+        && request.auth.uid == userId
+        && isValidUserPrefs(incoming(), userId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['departureLabel', 'showDepartureInSidebar', 'updatedAt'])
+        && incoming().uid == existing().uid
+        && incoming().updatedAt == request.time
+        && isAuthorizedUser();
+      allow delete: if isValidId(userId) && isSignedInVerified() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /shared_meta/{docId} {
+      allow get: if isValidId(docId) && docId == 'current' && isSignedInVerified() && isAuthorizedUser();
+      allow create: if isValidId(docId)
+        && docId == 'current'
+        && isSignedInVerified()
+        && isValidSharedMeta(incoming(), docId)
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isValidId(docId)
+        && docId == 'current'
+        && isSignedInVerified()
+        && isValidSharedMeta(incoming(), docId)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'source',
+          'stationsFileName',
+          'snowFileName',
+          'importedAt',
+          'stationCount',
+          'snowCount',
+          'stationChunkCount',
+          'snowChunkCount',
+          'lastSnowDay',
+          'lastArchiveCatchupAt',
+          'revision',
+          'updatedByUid',
+          'updatedAt'
+        ])
+        && incoming().docId == existing().docId
+        && incoming().revision >= existing().revision
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow delete: if false;
+    }
+
+    match /shared_chunks/{chunkId} {
+      allow get: if isValidId(chunkId)
+        && chunkId.matches('^(stations|snow)_[0-9]{1,3}$')
+        && isSignedInVerified()
+        && isAuthorizedUser();
+      allow create: if isValidId(chunkId)
+        && isSignedInVerified()
+        && isValidSharedChunk(incoming(), chunkId)
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isValidId(chunkId)
+        && isSignedInVerified()
+        && isValidSharedChunk(incoming(), chunkId)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'revision',
+          'items',
+          'updatedByUid',
+          'updatedAt'
+        ])
+        && incoming().kind == existing().kind
+        && incoming().chunkIndex == existing().chunkIndex
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow delete: if isValidId(chunkId)
+        && chunkId.matches('^(stations|snow)_[0-9]{1,3}$')
+        && isSignedInVerified()
+        && isAdmin();
+    }
+  }
+}
